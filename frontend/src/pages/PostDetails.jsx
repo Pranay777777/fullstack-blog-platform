@@ -83,7 +83,7 @@ const PostDetails = () => {
     if (!newComment.trim()) return;
 
     try {
-      await api.post(`/comments/${id}`, { content: newComment });
+      await api.post('/comments', { postId: id, content: newComment });
       setNewComment('');
       fetchComments();
     } catch (err) {
@@ -99,6 +99,29 @@ const PostDetails = () => {
       fetchComments();
     } catch (err) {
       setError('Failed to delete comment');
+    }
+  };
+
+  const handleLikeComment = async (commentId) => {
+    if (!user) {
+      setError('Please login to like comments');
+      return;
+    }
+
+    try {
+      await api.post(`/likes/comment/${commentId}`);
+      fetchComments();
+    } catch (err) {
+      setError('Failed to like comment');
+    }
+  };
+
+  const handleApproveComment = async (commentId) => {
+    try {
+      await api.put(`/comments/approve/${commentId}`);
+      fetchComments();
+    } catch (err) {
+      setError('Failed to approve comment');
     }
   };
 
@@ -231,15 +254,34 @@ const PostDetails = () => {
                   <div className="text-sm text-gray-500 mb-2">
                     {new Date(comment.created_at).toLocaleDateString()}
                   </div>
-                  <p className="text-gray-700">{comment.content}</p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-gray-700 flex-1">{comment.content}</p>
+                    <button
+                      onClick={() => handleLikeComment(comment.id)}
+                      className="text-red-500 hover:text-red-600 text-sm"
+                      disabled={!user}
+                    >
+                      ❤️ {comment.like_count || 0}
+                    </button>
+                  </div>
                 </div>
                 {user && (user.id === comment.user_id || isAdmin()) && (
-                  <button
-                    onClick={() => handleDeleteComment(comment.id)}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {isAdmin() && comment.status !== 'approved' && (
+                      <button
+                        onClick={() => handleApproveComment(comment.id)}
+                        className="text-green-600 hover:text-green-800 text-sm"
+                      >
+                        Approve
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteComment(comment.id)}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

@@ -1,18 +1,31 @@
-# 🎉 Full Stack Blog Platform - Feature Implementation Complete!
+# Full Stack Blog Platform - Implementation Summary
 
-## ✅ All 5 Phases Implemented Successfully
+## Quick Start (ELI10)
+1. Install backend deps: `cd backend` then `npm install`
+2. Install frontend deps: `cd ..\frontend` then `npm install`
+3. Start backend: `cd ..\backend` then `npm run dev`
+4. Start frontend: `cd ..\frontend` then `npm run dev`
+5. Open http://localhost:3000
 
-### 📊 Final Test Results
+## Current Status
+- Backend and frontend features implemented (auth, posts, comments, likes, admin moderation)
+- Comment approval flow enforced (pending -> approved)
+- Comment likes visible in UI
+- Edit post page implemented and protected
+- Tests updated for new endpoints and flows
 
-**Backend: 92/92 Tests Passing ✅**
-- 67% Code Coverage
-- All features tested
-- Zero errors
+## Recent Updates
+- Comment creation aligned to `POST /api/comments` with `postId` in body
+- Admin comment approval endpoint added (`PUT /api/comments/approve/:id`)
+- Public comment list shows approved only; admin can see all
+- Comment like counts exposed and rendered in UI
+- Integration flow test added (signup -> post -> comment -> approve -> likes)
 
-**Frontend: 24/24 Tests Passing ✅**
-- All components working
-- User flows validated
-- Zero errors
+## ✅ All Phases Implemented Successfully
+
+## 📊 Test Results (Run to Confirm)
+- Backend: `npm test` (Jest + Supertest with coverage)
+- Frontend: `npm test` (Vitest + RTL with coverage)
 
 ---
 
@@ -103,6 +116,7 @@
   - Login required messaging
   - State management for likes
   - Fetch likes on component mount
+- ✅ Comment like button with counts in the comment list
 - ✅ Tests updated to mock like API calls
 
 ---
@@ -216,6 +230,8 @@ CREATE INDEX idx_likes_post ON likes(post_id);
 CREATE INDEX idx_likes_comment ON likes(comment_id);
 ```
 
+Note: New comments are created as `pending` in app logic and require admin approval to appear publicly.
+
 ---
 
 ## 🎯 API Endpoints Added
@@ -228,6 +244,11 @@ CREATE INDEX idx_likes_comment ON likes(comment_id);
 - `POST /api/likes/post/:id` - Like/unlike post
 - `POST /api/likes/comment/:id` - Like/unlike comment
 - `GET /api/likes/post/:id` - Get post likes
+
+### Comments
+- `POST /api/comments` - Create comment (body: postId, content)
+- `GET /api/comments/:postId` - List comments (public approved only)
+- `PUT /api/comments/approve/:id` - Approve comment (admin)
 
 ### Users
 - `GET /api/users/profile` - Get user profile
@@ -261,27 +282,19 @@ CREATE INDEX idx_likes_comment ON likes(comment_id);
    - Easy profile updates
    - Password change functionality
 
+6. **Comment Approval + Likes**
+  - Pending comments require admin approval
+  - Comment likes shown with counts
+
 ---
 
 ## 🧪 Testing Summary
 
-### Backend Tests (92 passing)
-- ✅ Database connection & schema (8 tests)
-- ✅ Authentication (19 tests)
-- ✅ Posts CRUD (27 tests)
-- ✅ Comments (19 tests)
-- ✅ RBAC (19 tests)
+### Backend Tests
+- Auth, posts, comments (pending/approved), likes, RBAC, integration flow
 
-### Frontend Tests (24 passing)
-- ✅ AuthContext (6 tests)
-- ✅ Navbar (4 tests)
-- ✅ Login (5 tests)
-- ✅ Home (6 tests)
-- ✅ PostDetails with markdown (3 tests)
-
-### Test Coverage
-- Backend: 67% statements, 51% branches
-- Frontend: All critical paths tested
+### Frontend Tests
+- Login, register, protected routes, post list/details, create/edit post, comments, admin approval button, likes
 
 ---
 
@@ -296,6 +309,8 @@ CREATE INDEX idx_likes_comment ON likes(comment_id);
 - `backend/src/routes/likeRoutes.js`
 - `backend/src/routes/userRoutes.js`
 - `backend/uploads/` (directory)
+- `backend/tests/likes.test.js`
+- `backend/tests/integration-flow.test.js`
 
 **Modified:**
 - `backend/src/config/database.js`
@@ -309,7 +324,12 @@ CREATE INDEX idx_likes_comment ON likes(comment_id);
 **Created:**
 - `frontend/src/pages/Profile.jsx`
 - `frontend/src/pages/AdminPanel.jsx`
+- `frontend/src/pages/EditPost.jsx`
 - `frontend/src/tests/PostDetails.test.jsx`
+- `frontend/src/tests/Register.test.jsx`
+- `frontend/src/tests/CreatePost.test.jsx`
+- `frontend/src/tests/EditPost.test.jsx`
+- `frontend/src/tests/PrivateRoute.test.jsx`
 
 **Modified:**
 - `frontend/src/pages/CreatePost.jsx`
@@ -358,6 +378,22 @@ CREATE INDEX idx_likes_comment ON likes(comment_id);
 5. Only approved posts show on homepage
 ```
 
+### 4. **Approving Comments**
+```
+1. Login as admin user
+2. Open a post with pending comments
+3. Click "Approve" on a comment
+4. Approved comments become public
+```
+
+### 5. **Editing Posts**
+```
+1. Open your post
+2. Click "Edit"
+3. Update title/content
+4. Save changes
+```
+
 ### 4. **Updating Profile**
 ```
 1. Login as any user
@@ -386,7 +422,7 @@ This project demonstrates:
 3. ✅ **Authentication & Authorization** - JWT + RBAC
 4. ✅ **File Upload Handling** - Multer with validation
 5. ✅ **Database Design** - Normalized schema with relationships
-6. ✅ **Test-Driven Development** - 116 total tests
+6. ✅ **Test-Driven Development** - Multiple backend and frontend suites
 7. ✅ **Modern React Patterns** - Hooks, Context, Router
 8. ✅ **Security Best Practices** - Password hashing, input validation
 9. ✅ **Admin Features** - Content moderation system
@@ -407,7 +443,7 @@ This project demonstrates:
 - ✅ Interactive like system
 - ✅ Markdown content support
 - ✅ Responsive design
-- ✅ Test coverage (67% backend, 100% frontend critical paths)
+- ✅ Test coverage enforced by npm test scripts
 
 ---
 
@@ -425,4 +461,4 @@ The Full Stack Blog Platform now includes all requested features and is producti
 
 ---
 
-Generated on: February 17, 2026
+Generated on: March 2, 2026

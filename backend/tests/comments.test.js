@@ -71,14 +71,15 @@ describe('Comments API', () => {
     if (fs.existsSync(shmPath)) fs.unlinkSync(shmPath);
   });
 
-  describe('POST /api/comments/:postId', () => {
+  describe('POST /api/comments', () => {
     test('should add a comment to a post', async () => {
       const commentData = {
+        postId,
         content: 'This is a test comment'
       };
 
       const response = await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${userToken}`)
         .send(commentData)
         .expect(201);
@@ -90,15 +91,17 @@ describe('Comments API', () => {
       expect(response.body.data.post_id).toBe(postId);
       expect(response.body.data.user_id).toBe(userId);
       expect(response.body.data.user_username).toBe('testuser');
+      expect(response.body.data.status).toBe('pending');
     });
 
     test('should fail without authentication', async () => {
       const commentData = {
+        postId,
         content: 'Test comment'
       };
 
       const response = await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .send(commentData)
         .expect(401);
 
@@ -107,11 +110,12 @@ describe('Comments API', () => {
 
     test('should fail with empty content', async () => {
       const commentData = {
+        postId,
         content: ''
       };
 
       const response = await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${userToken}`)
         .send(commentData)
         .expect(400);
@@ -122,9 +126,19 @@ describe('Comments API', () => {
 
     test('should fail with missing content', async () => {
       const response = await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${userToken}`)
-        .send({})
+        .send({ postId })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    test('should fail with missing postId', async () => {
+      const response = await request(app)
+        .post('/api/comments')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ content: 'Missing post id' })
         .expect(400);
 
       expect(response.body.success).toBe(false);
@@ -132,11 +146,12 @@ describe('Comments API', () => {
 
     test('should fail for non-existent post', async () => {
       const commentData = {
+        postId: 99999,
         content: 'Comment on non-existent post'
       };
 
       const response = await request(app)
-        .post('/api/comments/99999')
+        .post('/api/comments')
         .set('Authorization', `Bearer ${userToken}`)
         .send(commentData)
         .expect(404);
@@ -147,11 +162,12 @@ describe('Comments API', () => {
 
     test('should fail with content too long', async () => {
       const commentData = {
+        postId,
         content: 'a'.repeat(1001)
       };
 
       const response = await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${userToken}`)
         .send(commentData)
         .expect(400);
@@ -161,15 +177,15 @@ describe('Comments API', () => {
 
     test('should allow multiple comments on same post', async () => {
       const comment1 = await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${userToken}`)
-        .send({ content: 'First comment' })
+        .send({ postId, content: 'First comment' })
         .expect(201);
 
       const comment2 = await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${user2Token}`)
-        .send({ content: 'Second comment' })
+        .send({ postId, content: 'Second comment' })
         .expect(201);
 
       expect(comment1.body.data.id).not.toBe(comment2.body.data.id);
@@ -179,20 +195,36 @@ describe('Comments API', () => {
   describe('GET /api/comments/:postId', () => {
     beforeEach(async () => {
       // Add some comments
-      await request(app)
-        .post(`/api/comments/${postId}`)
+      const comment1 = await request(app)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${userToken}`)
-        .send({ content: 'First comment' });
+        .send({ postId, content: 'First comment' });
 
-      await request(app)
-        .post(`/api/comments/${postId}`)
+      const comment2 = await request(app)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${user2Token}`)
-        .send({ content: 'Second comment' });
+        .send({ postId, content: 'Second comment' });
+
+      const comment3 = await request(app)
+        .post('/api/comments')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ postId, content: 'Third comment' });
+
+      // Approve all comments so public listing can see them
+      await request(app)
+        .put(`/api/comments/approve/${comment1.body.data.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
 
       await request(app)
-        .post(`/api/comments/${postId}`)
-        .set('Authorization', `Bearer ${userToken}`)
-        .send({ content: 'Third comment' });
+        .put(`/api/comments/approve/${comment2.body.data.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      await request(app)
+        .put(`/api/comments/approve/${comment3.body.data.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
     });
 
     test('should get all comments for a post', async () => {
@@ -261,6 +293,78 @@ describe('Comments API', () => {
 
       expect(response.body.success).toBe(true);
     });
+
+    test('should only show approved comments to public', async () => {
+      const pendingComment = await request(app)
+        .post('/api/comments')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ postId, content: 'Pending only' });
+
+      const publicResponse = await request(app)
+        .get(`/api/comments/${postId}`)
+        .expect(200);
+
+      const publicIds = publicResponse.body.data.map((comment) => comment.id);
+      expect(publicIds).not.toContain(pendingComment.body.data.id);
+
+      await request(app)
+        .put(`/api/comments/approve/${pendingComment.body.data.id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      const approvedResponse = await request(app)
+        .get(`/api/comments/${postId}`)
+        .expect(200);
+
+      const approvedIds = approvedResponse.body.data.map((comment) => comment.id);
+      expect(approvedIds).toContain(pendingComment.body.data.id);
+    });
+
+    test('should include pending comments for admin', async () => {
+      const pendingComment = await request(app)
+        .post('/api/comments')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ postId, content: 'Pending comment' });
+
+      const response = await request(app)
+        .get(`/api/comments/${postId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      const ids = response.body.data.map((comment) => comment.id);
+      expect(ids).toContain(pendingComment.body.data.id);
+    });
+  });
+
+  describe('PUT /api/comments/approve/:id', () => {
+    let commentId;
+
+    beforeEach(async () => {
+      const comment = await request(app)
+        .post('/api/comments')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ postId, content: 'Needs approval' });
+      commentId = comment.body.data.id;
+    });
+
+    test('should allow admin to approve comment', async () => {
+      const response = await request(app)
+        .put(`/api/comments/approve/${commentId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Comment approved');
+    });
+
+    test('should block non-admin from approving comment', async () => {
+      const response = await request(app)
+        .put(`/api/comments/approve/${commentId}`)
+        .set('Authorization', `Bearer ${userToken}`)
+        .expect(403);
+
+      expect(response.body.success).toBe(false);
+    });
   });
 
   describe('DELETE /api/comments/:id', () => {
@@ -270,15 +374,15 @@ describe('Comments API', () => {
     beforeEach(async () => {
       // Create comments
       const comment1 = await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${userToken}`)
-        .send({ content: 'User 1 comment' });
+        .send({ postId, content: 'User 1 comment' });
       commentId = comment1.body.data.id;
 
       const comment2 = await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${user2Token}`)
-        .send({ content: 'User 2 comment' });
+        .send({ postId, content: 'User 2 comment' });
       user2CommentId = comment2.body.data.id;
     });
 
@@ -294,6 +398,7 @@ describe('Comments API', () => {
       // Verify comment is deleted
       const comments = await request(app)
         .get(`/api/comments/${postId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
       expect(comments.body.data.find(c => c.id === commentId)).toBeUndefined();
@@ -341,14 +446,14 @@ describe('Comments API', () => {
     test('should delete all comments when post is deleted', async () => {
       // Add comments to post
       await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${userToken}`)
-        .send({ content: 'Comment 1' });
+        .send({ postId, content: 'Comment 1' });
 
       await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${user2Token}`)
-        .send({ content: 'Comment 2' });
+        .send({ postId, content: 'Comment 2' });
 
       // Delete the post
       await request(app)

@@ -3,14 +3,20 @@ const { body } = require('express-validator');
 const {
   addComment,
   getCommentsByPost,
-  deleteComment
+  deleteComment,
+  approveComment
 } = require('../controllers/commentController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, optionalProtect, authorize } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
 // Validation rules
 const commentValidation = [
+  body('postId')
+    .notEmpty()
+    .withMessage('Post ID is required')
+    .isInt({ min: 1 })
+    .withMessage('Post ID must be a positive integer'),
   body('content')
     .trim()
     .notEmpty()
@@ -20,8 +26,9 @@ const commentValidation = [
 ];
 
 // Routes
-router.post('/:postId', protect, commentValidation, addComment);
-router.get('/:postId', getCommentsByPost);
+router.post('/', protect, commentValidation, addComment);
+router.get('/:postId', optionalProtect, getCommentsByPost);
 router.delete('/:id', protect, deleteComment);
+router.put('/approve/:id', protect, authorize('admin'), approveComment);
 
 module.exports = router;

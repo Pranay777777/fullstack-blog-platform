@@ -5,7 +5,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const { validationResult } = require('express-validator');
 
 // @desc    Add a comment to a post
-// @route   POST /api/comments/:postId
+// @route   POST /api/comments
 // @access  Private
 const addComment = asyncHandler(async (req, res, next) => {
   const errors = validationResult(req);
@@ -13,8 +13,7 @@ const addComment = asyncHandler(async (req, res, next) => {
     return next(new AppError(errors.array()[0].msg, 400));
   }
 
-  const { postId } = req.params;
-  const { content } = req.body;
+  const { postId, content } = req.body;
   const user_id = req.user.id;
 
   // Check if post exists
@@ -27,7 +26,8 @@ const addComment = asyncHandler(async (req, res, next) => {
   const commentId = CommentModel.create({
     content,
     post_id: postId,
-    user_id
+    user_id,
+    status: 'pending'
   });
 
   const comment = CommentModel.findById(commentId);
@@ -51,7 +51,8 @@ const getCommentsByPost = asyncHandler(async (req, res, next) => {
     return next(new AppError('Post not found', 404));
   }
 
-  const comments = CommentModel.findByPostId(postId);
+  const includeUnapproved = req.user?.role === 'admin';
+  const comments = CommentModel.findByPostId(postId, { includeUnapproved });
 
   res.status(200).json({
     success: true,
@@ -92,5 +93,23 @@ const deleteComment = asyncHandler(async (req, res, next) => {
 module.exports = {
   addComment,
   getCommentsByPost,
-  deleteComment
+  deleteComment,
+  approveComment: asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+
+    const comment = CommentModel.findById(id);
+    if (!comment) {
+      return next(new AppError('Comment not found', 404));
+    }
+
+    const approved = CommentModel.approve(id);
+    if (!approved) {
+      return next(new AppError('Failed to approve comment', 500));
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Comment approved'
+    });
+  })
 };

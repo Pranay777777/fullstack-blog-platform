@@ -1,6 +1,43 @@
 # Production-Ready Full Stack Blog Platform
 
-A modern, fully-tested blog platform built with React (frontend) and Node.js/Express (backend), featuring JWT authentication, role-based access control, markdown support, image uploads, likes system, and comprehensive test coverage.
+A modern blog platform built with React (frontend) and Node.js/Express (backend), featuring JWT authentication, role-based access control, markdown support, image uploads, likes for posts and comments, and an admin approval workflow for comments and posts.
+
+## ✅ Quick Start (ELI10)
+Follow these steps in order.
+
+### 1) Install dependencies
+```powershell
+# From the project root
+cd backend
+npm install
+
+cd ..\frontend
+npm install
+```
+
+### 2) Start the backend
+```powershell
+cd ..\backend
+npm run dev
+```
+Backend runs at: http://localhost:5000
+
+### 3) Start the frontend
+Open a new terminal:
+```powershell
+cd frontend
+npm run dev
+```
+Frontend runs at: http://localhost:3000
+
+### 4) Use the app
+1. Open http://localhost:3000
+2. Register a user
+3. Log in
+4. Create a post
+5. Add a comment (it will be pending)
+6. Log in as admin and approve the comment
+7. Like the post and the comment
 
 ## 🚀 Features
 
@@ -14,7 +51,7 @@ A modern, fully-tested blog platform built with React (frontend) and Node.js/Exp
 - **Pagination** support (10 posts per page)
 - **Input validation** with express-validator
 - **Error handling** middleware
-- **67% test coverage** with Jest & Supertest (92 passing tests)
+- **Jest + Supertest** test suite with coverage
 - **Static file serving** for uploaded images
 
 ### Frontend
@@ -26,15 +63,15 @@ A modern, fully-tested blog platform built with React (frontend) and Node.js/Exp
 - **Auth Context** for state management
 - **Protected routes** with admin-only routes
 - **React Markdown** for content rendering
-- **Comprehensive component tests** (24 passing tests)
+- **Component tests** with Vitest + React Testing Library
 
 ### Core Functionality
 - ✅ User registration & login
 - ✅ Create, read, update, delete blog posts
 - ✅ **Markdown support** in post content
 - ✅ **Image uploads** for featured images
-- ✅ Add & delete comments
-- ✅ **Like/unlike posts** with real-time counts
+- ✅ Add, approve, and delete comments (pending -> approved)
+- ✅ **Like/unlike posts and comments** with counts
 - ✅ Pagination for posts
 - ✅ **Admin approval system** for posts
 - ✅ **Profile update page** (username, email, password)
@@ -114,14 +151,19 @@ BLOGPLATFORM/
     │   │   ├── Register.jsx
     │   │   ├── PostDetails.jsx       # ✨ Markdown, images, likes
     │   │   ├── CreatePost.jsx        # ✨ Image upload, markdown
+    │   │   ├── EditPost.jsx           # ✨ Edit existing posts
     │   │   ├── Profile.jsx           # ✨ Update user profile
     │   │   └── AdminPanel.jsx        # ✨ Approve/reject posts
     │   ├── tests/
     │   │   ├── setup.js
     │   │   ├── Home.test.jsx
     │   │   ├── Login.test.jsx
+    │   │   ├── Register.test.jsx
     │   │   ├── Navbar.test.jsx
     │   │   ├── PostDetails.test.jsx  # ✨ Markdown tests
+    │   │   ├── CreatePost.test.jsx
+    │   │   ├── EditPost.test.jsx
+    │   │   ├── PrivateRoute.test.jsx
     │   │   └── AuthContext.test.jsx
     │   ├── App.jsx
     │   ├── main.jsx
@@ -173,7 +215,7 @@ npm install
 
 ## 🧪 Running Tests
 
-### Backend Tests (92 tests, 92% coverage)
+### Backend Tests
 
 ```powershell
 cd backend
@@ -192,13 +234,6 @@ npx jest tests/rbac.test.js
 npm run test:watch
 ```
 
-#### Backend Test Results:
-```
-Test Suites: 5 passed, 5 total
-Tests:       92 passed, 92 total
-Coverage:    92% statements, 81% branches, 89% functions, 92% lines
-```
-
 ### Frontend Tests
 
 ```powershell
@@ -207,12 +242,20 @@ cd frontend
 # Run all tests
 npm test
 
-# Run tests with coverage
-npm run test:coverage
-
 # Run tests with UI
 npm run test:ui
 ```
+
+## ✅ Manual Test Checklist
+- Sign up a user and an admin
+- Log in and confirm token is stored
+- Create a post with markdown and optional image
+- Edit the post as the author
+- Add a comment (verify it is pending)
+- Approve the comment as admin
+- Like the post and the comment
+- Delete a comment as admin and as its author
+- Verify public sees only approved comments
 
 ## 🚀 Running the Application
 
@@ -370,13 +413,21 @@ Response: { success: true, count: X, data: [...] }
 
 #### Add Comment (Protected)
 ```http
-POST /comments/:postId
+POST /comments
 Authorization: Bearer <token>
 Content-Type: application/json
 
 {
+  "postId": 1,
   "content": "Great post!"
 }
+```
+Note: New comments are created as pending and must be approved by an admin to appear publicly.
+
+#### Approve Comment (Admin only)
+```http
+PUT /comments/approve/:id
+Authorization: Bearer <token>
 ```
 
 #### Delete Comment (Protected - Author or Admin)
@@ -457,8 +508,11 @@ Content-Type: application/json
 - **/** - Home page with paginated post list
 - **/login** - User login
 - **/register** - User registration
-- **/posts/:id** - Post details with comments
+- **/post/:id** - Post details with comments
 - **/create-post** - Create new post (protected)
+- **/edit-post/:id** - Edit post (protected)
+- **/profile** - Profile update (protected)
+- **/admin** - Admin panel (admin only)
 
 ## 🔒 Security Features
 
@@ -471,27 +525,8 @@ Content-Type: application/json
 - CORS enabled
 - Authentication interceptors
 
-## 📊 Test Coverage Breakdown
-
-### Backend Coverage (92%)
-
-| File | Statements | Branches | Functions | Lines |
-|------|-----------|----------|-----------|-------|
-| Controllers | 97.7% | 95.38% | 100% | 97.7% |
-| Models | 89.85% | N/A | 88.23% | 89.85% |
-| Routes | 100% | 100% | 100% | 100% |
-| Utils | 76.47% | 53.33% | 100% | 75.75% |
-
-**Total: 92% statements, 81% branches, 89% functions, 92% lines**
-
-### Test Suites:
-- Database Tests: 8 tests
-- Auth Tests: 19 tests
-- Posts Tests: 27 tests
-- Comments Tests: 19 tests
-- RBAC Tests: 19 tests
-
-**Total: 92 passing tests**
+## 📊 Test Coverage
+Run `npm test` in backend and frontend to see current coverage results.
 
 ## 🐛 Troubleshooting
 

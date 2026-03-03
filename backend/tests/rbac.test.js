@@ -225,15 +225,15 @@ describe('Role-Based Access Control (RBAC)', () => {
 
       // Add comments from different users
       const comment1 = await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${userToken}`)
-        .send({ content: 'User 1 comment' });
+        .send({ postId, content: 'User 1 comment' });
       userCommentId = comment1.body.data.id;
 
       const comment2 = await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${user2Token}`)
-        .send({ content: 'User 2 comment' });
+        .send({ postId, content: 'User 2 comment' });
       user2CommentId = comment2.body.data.id;
     });
 
@@ -260,6 +260,7 @@ describe('Role-Based Access Control (RBAC)', () => {
 
       const comments = await request(app)
         .get(`/api/comments/${postId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
       expect(comments.body.data.length).toBe(0);
@@ -286,9 +287,9 @@ describe('Role-Based Access Control (RBAC)', () => {
 
     test('admin can add comments', async () => {
       const response = await request(app)
-        .post(`/api/comments/${postId}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ content: 'Admin comment' })
+        .send({ postId, content: 'Admin comment' })
         .expect(201);
 
       expect(response.body.success).toBe(true);
@@ -342,16 +343,16 @@ describe('Role-Based Access Control (RBAC)', () => {
 
       // Admin comments
       const adminComment = await request(app)
-        .post(`/api/comments/${post.body.data.id}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ content: 'Admin feedback' })
+        .send({ postId: post.body.data.id, content: 'Admin feedback' })
         .expect(201);
 
       // User comments
       const userComment = await request(app)
-        .post(`/api/comments/${post.body.data.id}`)
+        .post('/api/comments')
         .set('Authorization', `Bearer ${userToken}`)
-        .send({ content: 'User response' })
+        .send({ postId: post.body.data.id, content: 'User response' })
         .expect(201);
 
       expect(adminComment.body.success).toBe(true);

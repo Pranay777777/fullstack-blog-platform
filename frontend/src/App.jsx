@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import PostDetails from './pages/PostDetails';
 import CreatePost from './pages/CreatePost';
+import EditPost from './pages/EditPost';
 import Profile from './pages/Profile';
 import AdminPanel from './pages/AdminPanel';
 
@@ -26,6 +27,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <CreatePost />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/edit-post/:id"
+              element={
+                <PrivateRoute>
+                  <EditPost />
                 </PrivateRoute>
               }
             />

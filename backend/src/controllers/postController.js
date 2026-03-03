@@ -85,8 +85,8 @@ const updatePost = asyncHandler(async (req, res, next) => {
     return next(new AppError('Post not found', 404));
   }
 
-  // Check if user is the author
-  if (post.author_id !== req.user.id) {
+  // Check if user is the author or admin
+  if (post.author_id !== req.user.id && req.user.role !== 'admin') {
     return next(new AppError('Not authorized to update this post', 403));
   }
 

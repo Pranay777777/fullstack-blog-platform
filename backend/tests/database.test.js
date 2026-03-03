@@ -85,6 +85,7 @@ describe('Database Connection', () => {
     expect(columnNames).toContain('content');
     expect(columnNames).toContain('post_id');
     expect(columnNames).toContain('user_id');
+    expect(columnNames).toContain('status');
     expect(columnNames).toContain('created_at');
   });
 
